@@ -14,11 +14,12 @@ import { PokedexScreen } from './PokedexScreen';
 import { PokemonDetailScreen } from './PokemonDetailScreen';
 import { HuntScreen } from './HuntScreen';
 import { CameraScreen } from './CameraScreen';
+import { Simple3DScreen } from './Simple3DScreen';
 import { ProfileScreen } from './ProfileScreen';
 import { Pokemon } from './types';
 import { authService } from './auth';
 
-type Screen = 'login' | 'pokedex' | 'detail' | 'hunt' | 'camera' | 'profile';
+type Screen = 'login' | 'pokedex' | 'detail' | 'hunt' | 'camera' | 'ar3d' | 'profile';
 
 function AppContent() {
   const [currentScreen, setCurrentScreen] = useState<Screen>('login');
@@ -70,6 +71,8 @@ function AppContent() {
         return <HuntScreen />;
       case 'camera':
         return <CameraScreen />;
+      case 'ar3d':
+        return <Simple3DScreen />;
       case 'profile':
         return <ProfileScreen onLogout={handleLogout} />;
       default:
@@ -102,7 +105,14 @@ function AppContent() {
           style={[styles.navButton, currentScreen === 'camera' && styles.activeNavButton]}
           onPress={() => setCurrentScreen('camera')}
         >
-          <Text style={[styles.navText, currentScreen === 'camera' && styles.activeNavText]}>📷 AR</Text>
+          <Text style={[styles.navText, currentScreen === 'camera' && styles.activeNavText]}>📷 2D</Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity 
+          style={[styles.navButton, currentScreen === 'ar3d' && styles.activeNavButton]}
+          onPress={() => setCurrentScreen('ar3d')}
+        >
+          <Text style={[styles.navText, currentScreen === 'ar3d' && styles.activeNavText]}>🥽 3D AR</Text>
         </TouchableOpacity>
         
         <TouchableOpacity 
