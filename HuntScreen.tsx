@@ -11,10 +11,24 @@ import {
 import { useSelector, useDispatch } from 'react-redux';
 import Geolocation from 'react-native-geolocation-service';
 import { request, PERMISSIONS, RESULTS } from 'react-native-permissions';
-import MapView, { Marker } from 'react-native-maps';
 import { RootState, setCurrentLocation, addEncounter, addDiscoveredPokemon } from './store';
 import { pokeAPI } from './api';
 import { Pokemon, PokemonEncounter } from './types';
+
+// Disable MapView for Android to prevent crashes
+let MapView: any = null;
+let Marker: any = null;
+
+// Only load maps on iOS for now
+if (Platform.OS === 'ios') {
+  try {
+    const Maps = require('react-native-maps');
+    MapView = Maps.default;
+    Marker = Maps.Marker;
+  } catch (error) {
+    console.log('react-native-maps not available:', error);
+  }
+}
 
 export const HuntScreen: React.FC = () => {
   const [hunting, setHunting] = useState(false);
@@ -45,50 +59,64 @@ export const HuntScreen: React.FC = () => {
   };
 
   const getCurrentLocation = () => {
-    Geolocation.getCurrentPosition(
-      (position) => {
-        const { latitude, longitude } = position.coords;
-        dispatch(setCurrentLocation({ latitude, longitude }));
-        generateNearbyPokemon(latitude, longitude);
-      },
-      (error) => {
-        console.log('Location error:', error);
-        Alert.alert('Error', 'Unable to get current location');
-      },
-      { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 }
-    );
+    try {
+      Geolocation.getCurrentPosition(
+        (position) => {
+          const { latitude, longitude } = position.coords;
+          dispatch(setCurrentLocation({ latitude, longitude }));
+          generateNearbyPokemon(latitude, longitude);
+        },
+        (error) => {
+          console.log('Location error:', error);
+          Alert.alert(
+            'Location Error', 
+            'Unable to get current location. Please check your location settings and try again.'
+          );
+        },
+        { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 }
+      );
+    } catch (error) {
+      console.log('Geolocation service error:', error);
+      Alert.alert('Error', 'Location service is not available.');
+    }
   };
 
   const generateNearbyPokemon = async (lat: number, lng: number) => {
-    const pokemon: PokemonEncounter[] = [];
-    
-    // Generate 3-5 random Pokemon near the user's location
-    const count = Math.floor(Math.random() * 3) + 3;
-    
-    for (let i = 0; i < count; i++) {
-      try {
-        const randomPokemon = await pokeAPI.getRandomPokemon();
-        
-        // Generate random location within 500m radius
-        const offsetLat = (Math.random() - 0.5) * 0.01; // ~500m
-        const offsetLng = (Math.random() - 0.5) * 0.01;
-        
-        const encounter: PokemonEncounter = {
-          pokemon: randomPokemon,
-          location: {
-            latitude: lat + offsetLat,
-            longitude: lng + offsetLng,
-          },
-          timestamp: Date.now(),
-        };
-        
-        pokemon.push(encounter);
-      } catch (error) {
-        console.log('Error generating Pokemon:', error);
+    try {
+      const pokemon: PokemonEncounter[] = [];
+      
+      // Generate 3-5 random Pokemon near the user's location
+      const count = Math.floor(Math.random() * 3) + 3;
+      
+      for (let i = 0; i < count; i++) {
+        try {
+          const randomPokemon = await pokeAPI.getRandomPokemon();
+          
+          // Generate random location within 500m radius
+          const offsetLat = (Math.random() - 0.5) * 0.01; // ~500m
+          const offsetLng = (Math.random() - 0.5) * 0.01;
+          
+          const encounter: PokemonEncounter = {
+            pokemon: randomPokemon,
+            location: {
+              latitude: lat + offsetLat,
+              longitude: lng + offsetLng,
+            },
+            timestamp: Date.now(),
+          };
+          
+          pokemon.push(encounter);
+        } catch (error) {
+          console.log('Error generating Pokemon:', error);
+          // Continue with other Pokemon even if one fails
+        }
       }
+      
+      setNearbyPokemon(pokemon);
+    } catch (error) {
+      console.log('Error in generateNearbyPokemon:', error);
+      Alert.alert('Error', 'Unable to generate nearby Pokemon. Please try again.');
     }
-    
-    setNearbyPokemon(pokemon);
   };
 
   const startHunt = () => {
@@ -129,11 +157,31 @@ export const HuntScreen: React.FC = () => {
     );
   }
 
-  return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Pokemon Hunt</Text>
-      
-      <View style={styles.mapContainer}>
+  const renderMap = () => {
+    if (!MapView || !Marker) {
+      return (
+        <View style={styles.mapFallback}>
+          <Text style={styles.mapFallbackText}>Nearby Pokemon</Text>
+          <Text style={styles.mapFallbackSubtext}>Location: {currentLocation.latitude.toFixed(4)}, {currentLocation.longitude.toFixed(4)}</Text>
+          
+          {nearbyPokemon.map((encounter, index) => (
+            <TouchableOpacity 
+              key={index} 
+              style={styles.pokemonItem}
+              onPress={() => catchPokemon(encounter)}
+            >
+              <Text style={styles.pokemonName}>{encounter.pokemon.name}</Text>
+              <Text style={styles.pokemonDistance}>
+                ~{Math.floor(Math.random() * 500 + 50)}m away
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      );
+    }
+
+    try {
+      return (
         <MapView
           style={styles.map}
           initialRegion={{
@@ -154,6 +202,24 @@ export const HuntScreen: React.FC = () => {
             />
           ))}
         </MapView>
+      );
+    } catch (error) {
+      console.log('MapView render error:', error);
+      return (
+        <View style={styles.mapFallback}>
+          <Text style={styles.mapFallbackText}>Map error</Text>
+          <Text style={styles.mapFallbackSubtext}>Unable to load map component</Text>
+        </View>
+      );
+    }
+  };
+
+  return (
+    <View style={styles.container}>
+      <Text style={styles.title}>Pokemon Hunt</Text>
+      
+      <View style={styles.mapContainer}>
+        {renderMap()}
       </View>
 
       <View style={styles.controls}>
@@ -248,5 +314,45 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#666',
     marginBottom: 8,
+  },
+  mapFallback: {
+    flex: 1,
+    padding: 16,
+    backgroundColor: '#f5f5f5',
+  },
+  mapFallbackText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#666',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  mapFallbackSubtext: {
+    fontSize: 14,
+    color: '#999',
+    textAlign: 'center',
+    marginBottom: 16,
+  },
+  pokemonItem: {
+    backgroundColor: '#fff',
+    padding: 16,
+    marginVertical: 4,
+    borderRadius: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  pokemonName: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#2c5aa0',
+    textTransform: 'capitalize',
+  },
+  pokemonDistance: {
+    fontSize: 14,
+    color: '#666',
+    marginTop: 4,
   },
 });
