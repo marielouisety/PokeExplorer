@@ -9,9 +9,10 @@ import {
   StyleSheet,
   ActivityIndicator,
   Alert,
+  ScrollView,
 } from 'react-native';
 import { useSelector, useDispatch } from 'react-redux';
-import { RootState, setPokemon, setLoading } from './store';
+import { RootState, addPokemon, setLoading } from './store';
 import { pokeAPI } from './api';
 import { Pokemon } from './types';
 import { VoiceSearch } from './VoiceSearch';
@@ -20,71 +21,82 @@ interface PokedexScreenProps {
   onPokemonSelect: (pokemon: Pokemon) => void;
 }
 
+const POKEMON_PER_PAGE = 20;
+const TOTAL_POKEMON = 151;
+
 export const PokedexScreen: React.FC<PokedexScreenProps> = ({ onPokemonSelect }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<Pokemon[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
   const [showVoiceSearch, setShowVoiceSearch] = useState(false);
-  const { pokemon, loading } = useSelector((state: RootState) => state.app);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageData, setPageData] = useState<Pokemon[]>([]);
+  const [loadingPage, setLoadingPage] = useState(false);
   const dispatch = useDispatch();
 
   useEffect(() => {
-    loadInitialPokemon();
-  }, []);
+    loadPage(currentPage);
+  }, [currentPage]);
 
-  const loadInitialPokemon = async () => {
-    if (pokemon.length > 0) return;
-    
-    console.log('Loading initial Pokemon...');
-    dispatch(setLoading(true));
-    
-    // Direct test
-    fetch("https://pokeapi.co/api/v2/pokemon")
-      .then(r => console.log("STATUS:", r.status))
-      .catch(e => console.log("ERROR:", e));
-    
-    // Test connection first
-    const connectionOk = await pokeAPI.testConnection();
-    if (!connectionOk) {
-      Alert.alert('Connection Error', 'Cannot connect to Pokemon API. Please check your internet connection.');
-      dispatch(setLoading(false));
-      return;
+  useEffect(() => {
+    if (searchQuery) {
+      searchPokemon();
+    } else {
+      setSearchResults([]);
     }
-    
+  }, [searchQuery]);
+
+  const loadPage = async (page: number) => {
+    setLoadingPage(true);
     try {
-      const pokemonList: Pokemon[] = [];
-      for (let i = 1; i <= 5; i++) {
-        console.log(`Fetching Pokemon ${i}...`);
+      const start = (page - 1) * POKEMON_PER_PAGE + 1;
+      const end = Math.min(start + POKEMON_PER_PAGE - 1, TOTAL_POKEMON);
+      const pokemon: Pokemon[] = [];
+      
+      for (let i = start; i <= end; i++) {
         const poke = await pokeAPI.getPokemon(i);
-        pokemonList.push(poke);
+        pokemon.push(poke);
       }
-      console.log(`Loaded ${pokemonList.length} Pokemon`);
-      dispatch(setPokemon(pokemonList));
+      setPageData(pokemon);
     } catch (error) {
-      console.error('Error loading Pokemon:', error);
-      Alert.alert('Connection Error', 'Unable to load Pokemon. Please check your internet connection and try again.');
+      console.log('Error loading page:', error);
     } finally {
-      dispatch(setLoading(false));
+      setLoadingPage(false);
     }
   };
 
-  const handleSearch = async () => {
-    if (!searchQuery.trim()) {
-      setSearchResults([]);
-      return;
-    }
+  const totalPages = Math.ceil(TOTAL_POKEMON / POKEMON_PER_PAGE);
 
-    console.log('Searching for:', searchQuery);
-    dispatch(setLoading(true));
+  const goToPage = (page: number) => {
+    if (page >= 1 && page <= totalPages) {
+      setCurrentPage(page);
+    }
+  };
+
+  const searchPokemon = async () => {
+    if (!searchQuery.trim()) return;
+    
+    setIsSearching(true);
     try {
-      const results = await pokeAPI.searchPokemon(searchQuery);
-      console.log('Search results:', results);
-      setSearchResults(results);
+      const query = searchQuery.toLowerCase();
+      
+      // Try direct API fetch first (highest priority)
+      if (!isNaN(Number(query))) {
+        const poke = await pokeAPI.getPokemon(Number(query));
+        setSearchResults([poke]);
+      } else {
+        const poke = await pokeAPI.getPokemonByName(query);
+        setSearchResults([poke]);
+      }
     } catch (error) {
-      console.error('Search error:', error);
-      Alert.alert('Error', 'Pokemon not found');
-      setSearchResults([]);
+      // Fallback to loaded Pokemon
+      const filtered = pokemon.filter(p => 
+        p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        p.types.some(t => t.type.name.toLowerCase().includes(searchQuery.toLowerCase()))
+      );
+      setSearchResults(filtered);
     } finally {
-      dispatch(setLoading(false));
+      setIsSearching(false);
     }
   };
 
@@ -118,7 +130,7 @@ export const PokedexScreen: React.FC<PokedexScreenProps> = ({ onPokemonSelect })
     </TouchableOpacity>
   );
 
-  const displayData = searchResults.length > 0 ? searchResults : pokemon;
+  const displayData = searchQuery ? searchResults : pageData;
 
   return (
     <View style={styles.container}>
@@ -127,42 +139,63 @@ export const PokedexScreen: React.FC<PokedexScreenProps> = ({ onPokemonSelect })
       <View style={styles.searchContainer}>
         <TextInput
           style={styles.searchInput}
-          placeholder="Search Pokemon by name or ID..."
+          placeholder="Search by name, ID, or type..."
           value={searchQuery}
           onChangeText={setSearchQuery}
-          onSubmitEditing={handleSearch}
         />
-        <TouchableOpacity style={styles.searchButton} onPress={handleSearch}>
-          <Text style={styles.searchButtonText}>Search</Text>
-        </TouchableOpacity>
         <TouchableOpacity 
-          style={styles.voiceButton} 
+          style={styles.voiceButton}
           onPress={() => setShowVoiceSearch(true)}
         >
-          <Text style={styles.voiceButtonText}>🔍</Text>
+          <Text style={styles.voiceIcon}>🎤</Text>
         </TouchableOpacity>
       </View>
 
-      {loading ? (
+      {isSearching || loadingPage ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#2c5aa0" />
-          <Text>Loading Pokemon...</Text>
+          <Text>{isSearching ? 'Searching...' : 'Loading page...'}</Text>
         </View>
       ) : (
-        <FlatList
-          data={displayData}
-          renderItem={renderPokemonItem}
-          keyExtractor={(item) => item.id.toString()}
-          numColumns={2}
-          contentContainerStyle={styles.listContainer}
-        />
+        <>
+          <FlatList
+            data={displayData}
+            renderItem={renderPokemonItem}
+            keyExtractor={(item) => item.id.toString()}
+            numColumns={2}
+            contentContainerStyle={styles.listContainer}
+            ListEmptyComponent={<Text style={styles.emptyText}>No Pokemon found</Text>}
+          />
+          
+          {!searchQuery && (
+            <View style={styles.pagination}>
+              <TouchableOpacity 
+                style={[styles.pageButton, currentPage === 1 && styles.pageButtonDisabled]}
+                onPress={() => goToPage(currentPage - 1)}
+                disabled={currentPage === 1}
+              >
+                <Text style={styles.pageButtonText}>← Prev</Text>
+              </TouchableOpacity>
+              
+              <Text style={styles.pageInfo}>Page {currentPage} of {totalPages}</Text>
+              
+              <TouchableOpacity 
+                style={[styles.pageButton, currentPage === totalPages && styles.pageButtonDisabled]}
+                onPress={() => goToPage(currentPage + 1)}
+                disabled={currentPage === totalPages}
+              >
+                <Text style={styles.pageButtonText}>Next →</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        </>
       )}
       
       {showVoiceSearch && (
         <VoiceSearch 
-          onPokemonFound={(pokemon) => {
+          onPokemonFound={(poke) => {
             setShowVoiceSearch(false);
-            onPokemonSelect(pokemon);
+            onPokemonSelect(poke);
           }}
           onClose={() => setShowVoiceSearch(false)}
         />
@@ -187,6 +220,7 @@ const styles = StyleSheet.create({
   searchContainer: {
     flexDirection: 'row',
     marginBottom: 20,
+    alignItems: 'center',
   },
   searchInput: {
     flex: 1,
@@ -195,34 +229,58 @@ const styles = StyleSheet.create({
     padding: 12,
     borderRadius: 8,
     backgroundColor: '#fff',
+    fontSize: 16,
     marginRight: 10,
-  },
-  searchButton: {
-    backgroundColor: '#2c5aa0',
-    padding: 12,
-    borderRadius: 8,
-    justifyContent: 'center',
-    marginRight: 8,
-  },
-  searchButtonText: {
-    color: '#fff',
-    fontWeight: 'bold',
   },
   voiceButton: {
     backgroundColor: '#28a745',
-    padding: 12,
-    borderRadius: 8,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     justifyContent: 'center',
     alignItems: 'center',
-    width: 48,
   },
-  voiceButtonText: {
-    fontSize: 16,
+  voiceIcon: {
+    fontSize: 20,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    padding: 20,
+  },
+  emptyText: {
+    textAlign: 'center',
+    padding: 20,
+    color: '#666',
+    fontSize: 16,
+  },
+  pagination: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    backgroundColor: '#fff',
+    borderTopWidth: 1,
+    borderTopColor: '#e0e0e0',
+  },
+  pageButton: {
+    backgroundColor: '#2c5aa0',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 8,
+  },
+  pageButtonDisabled: {
+    backgroundColor: '#ccc',
+  },
+  pageButtonText: {
+    color: '#fff',
+    fontWeight: 'bold',
+  },
+  pageInfo: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#2c5aa0',
   },
   listContainer: {
     paddingBottom: 20,
