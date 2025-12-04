@@ -1,145 +1,34 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
   TouchableOpacity,
   StyleSheet,
   Alert,
+  Animated,
+  Dimensions,
+  Image,
+  PanResponder,
 } from 'react-native';
+import { Camera, useCameraDevice } from 'react-native-vision-camera';
 import { useDispatch } from 'react-redux';
 import { addDiscoveredPokemon } from './store';
 import { pokeAPI } from './api';
+import { request, PERMISSIONS, RESULTS } from 'react-native-permissions';
 
-// Safely import ViroReact components
-let ViroARSceneNavigator: any = null;
-let ViroARScene: any = null;
-let ViroText: any = null;
-let ViroSphere: any = null;
-let ViroAmbientLight: any = null;
-let ViroNode: any = null;
-let ViroAnimations: any = null;
-
-try {
-  const ViroReact = require('@viro-community/react-viro');
-  ViroARSceneNavigator = ViroReact.ViroARSceneNavigator;
-  ViroARScene = ViroReact.ViroARScene;
-  ViroText = ViroReact.ViroText;
-  ViroSphere = ViroReact.ViroSphere;
-  ViroAmbientLight = ViroReact.ViroAmbientLight;
-  ViroNode = ViroReact.ViroNode;
-  ViroAnimations = ViroReact.ViroAnimations;
-  
-  // Define animations
-  ViroAnimations.registerAnimations({
-    bounce: {
-      properties: { positionY: "+=0.2" },
-      easing: "EaseInEaseOut",
-      duration: 1000,
-    },
-  });
-} catch (error) {
-  console.log('ViroReact not available:', error);
-}
+const { width, height } = Dimensions.get('window');
 
 interface Pokemon3D {
   id: number;
   name: string;
-  color: string;
-  position: [number, number, number];
+  sprite: string;
+  baseX: number;
+  baseY: number;
+  translateX: Animated.Value;
+  translateY: Animated.Value;
+  scale: Animated.Value;
+  rotation: Animated.Value;
 }
-
-let globalPokemon: Pokemon3D[] = [];
-let globalDispatch: any = null;
-
-const ARScene = () => {
-  const dispatch = useDispatch();
-  globalDispatch = dispatch;
-
-  const catchPokemon = async (pokemonId: number) => {
-    const pokemonToCatch = globalPokemon.find(p => p.id === pokemonId);
-    if (!pokemonToCatch) return;
-
-    try {
-      const pokemonData = await pokeAPI.getPokemon(pokemonId);
-      dispatch(addDiscoveredPokemon(pokemonData));
-      
-      globalPokemon = globalPokemon.filter(p => p.id !== pokemonId);
-      
-      Alert.alert(
-        'Pokemon Caught!',
-        `You caught ${pokemonToCatch.name}! Added to your Pokedex.`
-      );
-    } catch (error) {
-      console.log('Failed to catch Pokemon:', error);
-    }
-  };
-
-  if (!ViroARScene) {
-    return null;
-  }
-
-  return (
-    <ViroARScene>
-      <ViroAmbientLight color="#FFFFFF" intensity={0.5} />
-      
-      {globalPokemon.map((poke) => (
-        <ViroNode key={poke.id} position={poke.position}>
-          <ViroSphere
-            radius={0.3}
-            position={[0, 0, 0]}
-            materials={[{
-              diffuseColor: poke.color,
-              shininess: 2.0,
-            }]}
-            onClick={() => catchPokemon(poke.id)}
-            animation={{
-              name: "bounce",
-              run: true,
-              loop: true,
-            }}
-          />
-          
-          <ViroSphere
-            radius={0.05}
-            position={[-0.1, 0.1, 0.25]}
-            materials={[{ diffuseColor: "#000000" }]}
-          />
-          <ViroSphere
-            radius={0.05}
-            position={[0.1, 0.1, 0.25]}
-            materials={[{ diffuseColor: "#000000" }]}
-          />
-          
-          <ViroText
-            text={poke.name.toUpperCase()}
-            scale={[0.5, 0.5, 0.5]}
-            position={[0, 0.6, 0]}
-            style={{
-              fontFamily: "Arial",
-              fontSize: 30,
-              color: "#FFFFFF",
-              textAlignVertical: "center",
-              textAlign: "center",
-            }}
-          />
-        </ViroNode>
-      ))}
-      
-      <ViroText
-        text="Tap Pokemon to catch them!"
-        scale={[0.3, 0.3, 0.3]}
-        position={[0, -2, -3]}
-        style={{
-          fontFamily: "Arial",
-          fontSize: 20,
-          color: "#FFFFFF",
-          textAlignVertical: "center",
-          textAlign: "center",
-        }}
-      />
-    </ViroARScene>
-  );
-};
 
 const getTypeColor = (type: string): string => {
   const colors: { [key: string]: string } = {
@@ -153,91 +42,206 @@ const getTypeColor = (type: string): string => {
   return colors[type] || '#D3D3D3';
 };
 
-const spawnPokemon = async () => {
-  try {
-    const pokemonData = await pokeAPI.getRandomPokemon();
+const Pokemon3DComponent: React.FC<{ pokemon: Pokemon3D; onCatch: () => void }> = ({ pokemon, onCatch }) => {
+  React.useEffect(() => {
+    const scaleAnimation = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pokemon.scale, {
+          toValue: 1.2,
+          duration: 1000,
+          useNativeDriver: true,
+        }),
+        Animated.timing(pokemon.scale, {
+          toValue: 1,
+          duration: 1000,
+          useNativeDriver: true,
+        }),
+      ])
+    );
     
-    const newPokemon: Pokemon3D = {
-      id: Date.now(), // Use timestamp for unique ID
-      name: pokemonData.name,
-      color: getTypeColor(pokemonData.types[0]?.type.name || 'normal'),
-      position: [
-        (Math.random() - 0.5) * 4,
-        Math.random() * 2,
-        -2 - Math.random() * 3
-      ]
+    const rotationAnimation = Animated.loop(
+      Animated.timing(pokemon.rotation, {
+        toValue: 1,
+        duration: 3000,
+        useNativeDriver: true,
+      })
+    );
+    
+    scaleAnimation.start();
+    rotationAnimation.start();
+    
+    return () => {
+      scaleAnimation.stop();
+      rotationAnimation.stop();
     };
-    
-    globalPokemon.push(newPokemon);
-    console.log('Spawned Pokemon:', newPokemon.name);
-    
-    setTimeout(() => {
-      globalPokemon = globalPokemon.filter(p => p.id !== newPokemon.id);
-    }, 10000);
-    
-  } catch (error) {
-    console.log('Failed to spawn Pokemon:', error);
-  }
+  }, [pokemon.id]);
+
+  const spin = pokemon.rotation.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '360deg'],
+  });
+
+  return (
+    <Animated.View
+      style={[
+        styles.pokemon3D,
+        {
+          transform: [
+            { translateX: pokemon.translateX },
+            { translateY: pokemon.translateY },
+            { scale: pokemon.scale },
+            { rotateY: spin },
+            { perspective: 1000 },
+          ],
+        },
+      ]}
+    >
+      <TouchableOpacity onPress={onCatch} style={styles.pokemonTouchable}>
+        <Image 
+          source={{ uri: pokemon.sprite }}
+          style={styles.pokemonSprite}
+        />
+        <Text style={styles.pokemonName}>{pokemon.name.toUpperCase()}</Text>
+      </TouchableOpacity>
+    </Animated.View>
+  );
 };
 
 export const AR3DScreen: React.FC = () => {
-  const [showAR, setShowAR] = useState(false);
+  const [hasPermission, setHasPermission] = useState(false);
+  const [pokemon, setPokemon] = useState<Pokemon3D[]>([]);
+  const [cameraOffset, setCameraOffset] = useState({ x: 0, y: 0 });
+  const device = useCameraDevice('back');
+  const dispatch = useDispatch();
 
-  if (!ViroARSceneNavigator) {
+  useEffect(() => {
+    requestCameraPermission();
+  }, []);
+
+  const panResponder = PanResponder.create({
+    onMoveShouldSetPanResponder: () => true,
+    onPanResponderMove: (evt, gestureState) => {
+      const newOffset = {
+        x: gestureState.dx * 0.5,
+        y: gestureState.dy * 0.5,
+      };
+      setCameraOffset(newOffset);
+      
+      // Update Pokemon positions to simulate 3D space
+      pokemon.forEach((poke) => {
+        Animated.timing(poke.translateX, {
+          toValue: poke.baseX - newOffset.x,
+          duration: 50,
+          useNativeDriver: true,
+        }).start();
+        
+        Animated.timing(poke.translateY, {
+          toValue: poke.baseY - newOffset.y,
+          duration: 50,
+          useNativeDriver: true,
+        }).start();
+      });
+    },
+    onPanResponderRelease: () => {
+      // Gradually return to center
+      setCameraOffset({ x: 0, y: 0 });
+      pokemon.forEach((poke) => {
+        Animated.timing(poke.translateX, {
+          toValue: poke.baseX,
+          duration: 500,
+          useNativeDriver: true,
+        }).start();
+        
+        Animated.timing(poke.translateY, {
+          toValue: poke.baseY,
+          duration: 500,
+          useNativeDriver: true,
+        }).start();
+      });
+    },
+  });
+
+  const requestCameraPermission = async () => {
+    const result = await request(PERMISSIONS.ANDROID.CAMERA);
+    setHasPermission(result === RESULTS.GRANTED);
+  };
+
+  const spawnPokemon = async () => {
+    try {
+      const pokemonData = await pokeAPI.getRandomPokemon();
+      
+      const baseX = Math.random() * (width - 100);
+      const baseY = Math.random() * (height - 200) + 100;
+      
+      const newPokemon: Pokemon3D = {
+        id: Date.now(),
+        name: pokemonData.name,
+        sprite: pokemonData.sprites.front_default,
+        baseX,
+        baseY,
+        translateX: new Animated.Value(baseX),
+        translateY: new Animated.Value(baseY),
+        scale: new Animated.Value(1),
+        rotation: new Animated.Value(0),
+      };
+      
+      setPokemon(prev => [...prev, newPokemon]);
+      console.log('Spawned AR Pokemon:', newPokemon.name);
+      
+      setTimeout(() => {
+        setPokemon(prev => prev.filter(p => p.id !== newPokemon.id));
+      }, 10000);
+      
+    } catch (error) {
+      console.log('Failed to spawn Pokemon:', error);
+    }
+  };
+
+  const catchPokemon = async (pokemonToCatch: Pokemon3D) => {
+    try {
+      const pokemonData = await pokeAPI.getRandomPokemon();
+      dispatch(addDiscoveredPokemon(pokemonData));
+      
+      setPokemon(prev => prev.filter(p => p.id !== pokemonToCatch.id));
+      
+      Alert.alert(
+        'Pokemon Caught!',
+        `You caught ${pokemonToCatch.name}! Added to your Pokedex.`
+      );
+    } catch (error) {
+      console.log('Failed to catch Pokemon:', error);
+    }
+  };
+
+  if (!hasPermission || !device) {
     return (
       <View style={styles.container}>
-        <Text style={styles.title}>3D AR Not Available</Text>
-        <Text style={styles.description}>
-          ViroReact is not properly configured. 3D AR features require additional setup.
-        </Text>
-        <Text style={styles.description}>
-          Use the 2D AR camera for now!
-        </Text>
-      </View>
-    );
-  }
-
-  if (!showAR) {
-    return (
-      <View style={styles.container}>
-        <Text style={styles.title}>3D AR Pokemon</Text>
-        <Text style={styles.description}>
-          Experience Pokemon in full 3D augmented reality!
-        </Text>
-        <TouchableOpacity 
-          style={styles.startButton}
-          onPress={() => setShowAR(true)}
-        >
-          <Text style={styles.buttonText}>Start AR Experience</Text>
+        <Text style={styles.title}>AR Pokemon</Text>
+        <Text style={styles.description}>Camera permission required for AR Pokemon experience</Text>
+        <TouchableOpacity style={styles.startButton} onPress={requestCameraPermission}>
+          <Text style={styles.buttonText}>Grant Permission</Text>
         </TouchableOpacity>
       </View>
     );
   }
 
   return (
-    <View style={styles.arContainer}>
-      <ViroARSceneNavigator
-        autofocus={true}
-        initialScene={{
-          scene: ARScene,
-        }}
-        style={styles.arView}
-      />
+    <View style={styles.arContainer} {...panResponder.panHandlers}>
+      <Camera style={styles.camera} device={device} isActive={true} />
+      
+      {pokemon.map((poke) => (
+        <Pokemon3DComponent
+          key={poke.id}
+          pokemon={poke}
+          onCatch={() => catchPokemon(poke)}
+        />
+      ))}
       
       <View style={styles.controls}>
-        <TouchableOpacity 
-          style={styles.spawnButton}
-          onPress={spawnPokemon}
-        >
+        <TouchableOpacity style={styles.spawnButton} onPress={spawnPokemon}>
           <Text style={styles.buttonText}>Spawn Pokemon</Text>
         </TouchableOpacity>
-        
-        <TouchableOpacity 
-          style={styles.exitButton}
-          onPress={() => setShowAR(false)}
-        >
-          <Text style={styles.buttonText}>Exit AR</Text>
-        </TouchableOpacity>
+        <Text style={styles.instructionText}>Drag to look around</Text>
       </View>
     </View>
   );
@@ -262,7 +266,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     color: '#666',
     marginBottom: 32,
-    lineHeight: 24,
   },
   startButton: {
     backgroundColor: '#2c5aa0',
@@ -273,26 +276,44 @@ const styles = StyleSheet.create({
   arContainer: {
     flex: 1,
   },
-  arView: {
+  camera: {
     flex: 1,
+  },
+  pokemon3D: {
+    position: 'absolute',
+    alignItems: 'center',
+  },
+  pokemonTouchable: {
+    alignItems: 'center',
+  },
+  pokemonSprite: {
+    width: 100,
+    height: 100,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 10,
+  },
+  pokemonName: {
+    marginTop: 8,
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: '#fff',
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
   },
   controls: {
     position: 'absolute',
     bottom: 50,
     left: 0,
     right: 0,
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    paddingHorizontal: 20,
+    alignItems: 'center',
   },
   spawnButton: {
     backgroundColor: '#2c5aa0',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 25,
-  },
-  exitButton: {
-    backgroundColor: '#dc3545',
     paddingHorizontal: 20,
     paddingVertical: 12,
     borderRadius: 25,
@@ -301,5 +322,11 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  instructionText: {
+    color: '#fff',
+    fontSize: 12,
+    marginTop: 8,
+    textAlign: 'center',
   },
 });
