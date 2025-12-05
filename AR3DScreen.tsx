@@ -10,7 +10,7 @@ import {
   Image,
   PanResponder,
 } from 'react-native';
-import { Camera, useCameraDevice } from 'react-native-vision-camera';
+
 import { useDispatch } from 'react-redux';
 import { addDiscoveredPokemon } from './store';
 import { pokeAPI } from './api';
@@ -111,7 +111,7 @@ export const AR3DScreen: React.FC = () => {
   const [hasPermission, setHasPermission] = useState(false);
   const [pokemon, setPokemon] = useState<Pokemon3D[]>([]);
   const [cameraOffset, setCameraOffset] = useState({ x: 0, y: 0 });
-  const device = useCameraDevice('back');
+
   const dispatch = useDispatch();
 
   useEffect(() => {
@@ -213,7 +213,7 @@ export const AR3DScreen: React.FC = () => {
     }
   };
 
-  if (!hasPermission || !device) {
+  if (!hasPermission) {
     return (
       <View style={styles.container}>
         <Text style={styles.title}>AR Pokemon</Text>
@@ -227,7 +227,7 @@ export const AR3DScreen: React.FC = () => {
 
   return (
     <View style={styles.arContainer} {...panResponder.panHandlers}>
-      <Camera style={styles.camera} device={device} isActive={true} />
+      <View style={styles.camera} />
       
       {pokemon.map((poke) => (
         <Pokemon3DComponent
@@ -278,6 +278,7 @@ const styles = StyleSheet.create({
   },
   camera: {
     flex: 1,
+    backgroundColor: '#000',
   },
   pokemon3D: {
     position: 'absolute',

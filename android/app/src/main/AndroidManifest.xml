@@ -25,6 +25,11 @@
       
       <!-- ARCore metadata -->
       <meta-data android:name="com.google.ar.core" android:value="optional" />
+      
+      <!-- Google Maps API Key -->
+      <meta-data
+        android:name="com.google.android.geo.API_KEY"
+        android:value="AIzaSyC5d8pM66hr6ztH9sPTqWIQGrt6IZQoxjs" />
       <activity
         android:name=".MainActivity"
         android:label="@string/app_name"

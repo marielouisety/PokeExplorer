@@ -30,16 +30,11 @@ export const HuntScreen: React.FC = () => {
   }, []);
 
   const initializeHunt = async () => {
-    try {
-      const hasPermission = await locationService.requestLocationPermission();
-      if (hasPermission) {
-        getCurrentLocation();
-      } else {
-        Alert.alert('Permission Denied', 'Location permission is required for Pokemon hunting');
-      }
-    } catch (error) {
-      console.log('Hunt initialization error:', error);
-      Alert.alert('Error', 'Unable to initialize hunt mode');
+    const hasPermission = await locationService.requestLocationPermission();
+    if (hasPermission) {
+      getCurrentLocation();
+    } else {
+      Alert.alert('Permission Denied', 'Location permission is required for Pokemon hunting');
     }
   };
 
@@ -61,7 +56,10 @@ export const HuntScreen: React.FC = () => {
       }
     } catch (error) {
       console.log('Location error:', error);
-      // Don't show alert to prevent crashes
+      Alert.alert(
+        'Location Error', 
+        'Unable to get current location. Please check your location settings and try again.'
+      );
     }
   };
 

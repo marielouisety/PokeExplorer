@@ -5,9 +5,10 @@ import {
   TouchableOpacity,
   StyleSheet,
   StatusBar,
+  SafeAreaView,
 } from 'react-native';
 import { Provider } from 'react-redux';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
+
 import { store } from './store';
 import { LoginScreen } from './LoginScreen';
 import { PokedexScreen } from './PokedexScreen';
@@ -28,16 +29,9 @@ function AppContent() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   useEffect(() => {
-    const unsubscribe = authService.onAuthStateChanged((user) => {
-      setIsAuthenticated(!!user);
-      if (user) {
-        setCurrentScreen('pokedex');
-      } else {
-        setCurrentScreen('login');
-      }
-    });
-
-    return unsubscribe;
+    // Skip Firebase auth for now
+    setIsAuthenticated(true);
+    setCurrentScreen('pokedex');
   }, []);
 
   const handleLogin = () => {
@@ -127,20 +121,20 @@ function AppContent() {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#f0f8ff" />
-      {renderScreen()}
+      <View style={styles.content}>
+        {renderScreen()}
+      </View>
       {renderBottomNav()}
-    </View>
+    </SafeAreaView>
   );
 }
 
 function App() {
   return (
     <Provider store={store}>
-      <SafeAreaProvider>
-        <AppContent />
-      </SafeAreaProvider>
+      <AppContent />
     </Provider>
   );
 }
@@ -149,6 +143,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f0f8ff',
+  },
+  content: {
+    flex: 1,
   },
   bottomNav: {
     flexDirection: 'row',
