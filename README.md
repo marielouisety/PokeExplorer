@@ -1,97 +1,231 @@
-This is a new [**React Native**](https://reactnative.dev) project, bootstrapped using [`@react-native-community/cli`](https://github.com/react-native-community/cli).
+# PokeExplorer 🔍⚡
 
-# Getting Started
+An interactive, augmented reality-enhanced Pokédex built with React Native. Discover, catalog, and share Pokémon in real-world contexts using geolocation, AR overlays, and device sensors.
 
-> **Note**: Make sure you have completed the [Set Up Your Environment](https://reactnative.dev/docs/set-up-your-environment) guide before proceeding.
+## 🎯 Features
 
-## Step 1: Start Metro
+### Core Features
+- **User Authentication**: Firebase-based login/signup system
+- **Interactive Pokédex**: Browse and search Pokémon with PokeAPI integration
+- **Geolocation Hunt Mode**: Find Pokémon based on your real-world location
+- **AR Camera**: Overlay Pokémon on camera feed and capture photos
+- **Voice Search**: Search Pokémon using voice commands
+- **Social Sharing**: Share discoveries on social media
+- **Offline Support**: Cached Pokémon data for offline viewing
 
-First, you will need to run **Metro**, the JavaScript build tool for React Native.
+### Technical Features
+- Cross-platform (iOS/Android) compatibility
+- Redux state management
+- Real-time location tracking
+- Push notifications for nearby Pokémon
+- Secure API key management
+- Comprehensive permission handling
 
-To start the Metro dev server, run the following command from the root of your React Native project:
+## 🚀 Getting Started
 
-```sh
-# Using npm
-npm start
+### Prerequisites
 
-# OR using Yarn
-yarn start
+1. **React Native Development Environment**
+   - Follow the [React Native Environment Setup](https://reactnative.dev/docs/set-up-your-environment) guide
+   - Ensure you have Node.js 20+ installed
+
+2. **Firebase Project Setup**
+   - Create a new Firebase project at [Firebase Console](https://console.firebase.google.com/)
+   - Enable Authentication and Realtime Database
+   - Download configuration files:
+     - `google-services.json` for Android (place in `android/app/`)
+     - `GoogleService-Info.plist` for iOS (add to Xcode project)
+
+3. **API Keys**
+   - No PokeAPI key required (free tier)
+   - Optional: Google Maps API key for enhanced location features
+
+### Installation
+
+1. **Clone and Install Dependencies**
+   ```bash
+   git clone <your-repo-url>
+   cd PokeExplorer
+   npm install
+   ```
+
+2. **iOS Setup**
+   ```bash
+   cd ios
+   bundle install
+   bundle exec pod install
+   cd ..
+   ```
+
+3. **Environment Configuration**
+   - Copy `.env.example` to `.env`
+   - Update Firebase configuration in `.env`
+   - Add your API keys
+
+4. **Platform-Specific Setup**
+
+   **Android:**
+   - Place `google-services.json` in `android/app/`
+   - Ensure Android SDK and emulator are set up
+
+   **iOS:**
+   - Add `GoogleService-Info.plist` to Xcode project
+   - Configure signing in Xcode
+
+### Running the App
+
+1. **Start Metro**
+   ```bash
+   npm start
+   ```
+
+2. **Run on Android**
+   ```bash
+   npm run android
+   ```
+
+3. **Run on iOS**
+   ```bash
+   npm run ios
+   ```
+
+## 📱 App Structure
+
+```
+PokeExplorer/
+├── App.tsx                 # Main app component with navigation
+├── store.ts               # Redux store configuration
+├── types.ts               # TypeScript type definitions
+├── api.ts                 # PokeAPI service with caching
+├── auth.ts                # Firebase authentication service
+├── permissions.ts         # Device permissions manager
+├── notifications.ts       # Push notification service
+├── LoginScreen.tsx        # User authentication screen
+├── PokedexScreen.tsx      # Main Pokémon browsing screen
+├── PokemonDetailScreen.tsx # Detailed Pokémon information
+├── HuntScreen.tsx         # Geolocation-based hunting
+├── CameraScreen.tsx       # AR camera functionality
+├── ProfileScreen.tsx      # User profile and statistics
+└── VoiceSearch.tsx        # Voice search component
 ```
 
-## Step 2: Build and run your app
+## 🔧 Configuration
 
-With Metro running, open a new terminal window/pane from the root of your React Native project, and use one of the following commands to build and run your Android or iOS app:
+### Environment Variables (.env)
+```env
+# Firebase Configuration
+FIREBASE_API_KEY=your_api_key
+FIREBASE_AUTH_DOMAIN=your_project.firebaseapp.com
+FIREBASE_DATABASE_URL=https://your_project.firebaseio.com
+FIREBASE_PROJECT_ID=your_project_id
 
-### Android
-
-```sh
-# Using npm
-npm run android
-
-# OR using Yarn
-yarn android
+# Optional: Google Maps API Key
+GOOGLE_MAPS_API_KEY=your_maps_api_key
 ```
 
-### iOS
+### Required Permissions
+- **Location**: For Pokémon hunting and map features
+- **Camera**: For AR Pokémon overlay and photo capture
+- **Microphone**: For voice search functionality
+- **Storage**: For caching Pokémon data and photos
 
-For iOS, remember to install CocoaPods dependencies (this only needs to be run on first clone or after updating native deps).
+## 🎮 How to Use
 
-The first time you create a new project, run the Ruby bundler to install CocoaPods itself:
+1. **Sign Up/Login**: Create an account or sign in with existing credentials
+2. **Browse Pokédex**: Search and explore Pokémon by name, type, or ID
+3. **Hunt Mode**: Enable location services and find Pokémon near you
+4. **AR Camera**: Use camera to overlay Pokémon in real world and capture photos
+5. **Voice Search**: Tap microphone icon and speak Pokémon names
+6. **Share**: Share your discoveries on social media
+7. **Profile**: Track your progress and earned badges
 
-```sh
-bundle install
+## 🏗️ Architecture
+
+- **State Management**: Redux Toolkit for predictable state updates
+- **Navigation**: Custom tab-based navigation system
+- **API Integration**: Axios with AsyncStorage caching
+- **Authentication**: Firebase Auth with email/password
+- **Real-time Features**: Firebase Realtime Database
+- **Permissions**: react-native-permissions for cross-platform handling
+
+## 🧪 Testing
+
+```bash
+# Run unit tests
+npm test
+
+# Run with coverage
+npm run test:coverage
 ```
 
-Then, and every time you update your native dependencies, run:
+## 📦 Dependencies
 
-```sh
-bundle exec pod install
-```
+### Core
+- React Native 0.82.1
+- Redux Toolkit
+- React Navigation
+- Firebase SDK
 
-For more information, please visit [CocoaPods Getting Started guide](https://guides.cocoapods.org/using/getting-started.html).
+### Features
+- react-native-maps (Geolocation)
+- react-native-vision-camera (AR/Camera)
+- @react-native-voice/voice (Voice search)
+- react-native-share (Social sharing)
+- react-native-push-notification (Notifications)
 
-```sh
-# Using npm
-npm run ios
+### Development
+- TypeScript
+- ESLint
+- Prettier
+- Jest (Testing)
 
-# OR using Yarn
-yarn ios
-```
+## 🚨 Troubleshooting
 
-If everything is set up correctly, you should see your new app running in the Android Emulator, iOS Simulator, or your connected device.
+### Common Issues
 
-This is one way to run your app — you can also build it directly from Android Studio or Xcode.
+1. **Metro bundler issues**
+   ```bash
+   npx react-native start --reset-cache
+   ```
 
-## Step 3: Modify your app
+2. **iOS build failures**
+   ```bash
+   cd ios && pod deintegrate && pod install
+   ```
 
-Now that you have successfully run the app, let's make changes!
+3. **Android build issues**
+   ```bash
+   cd android && ./gradlew clean
+   ```
 
-Open `App.tsx` in your text editor of choice and make some changes. When you save, your app will automatically update and reflect these changes — this is powered by [Fast Refresh](https://reactnative.dev/docs/fast-refresh).
+4. **Permission denied errors**
+   - Ensure all required permissions are granted in device settings
+   - Check Firebase configuration files are properly placed
 
-When you want to forcefully reload, for example to reset the state of your app, you can perform a full reload:
+### Performance Tips
+- Enable Hermes for better performance
+- Use release builds for testing on physical devices
+- Monitor memory usage with large Pokémon datasets
 
-- **Android**: Press the <kbd>R</kbd> key twice or select **"Reload"** from the **Dev Menu**, accessed via <kbd>Ctrl</kbd> + <kbd>M</kbd> (Windows/Linux) or <kbd>Cmd ⌘</kbd> + <kbd>M</kbd> (macOS).
-- **iOS**: Press <kbd>R</kbd> in iOS Simulator.
+## 🤝 Contributing
 
-## Congratulations! :tada:
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit changes (`git commit -m 'Add amazing feature'`)
+4. Push to branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
-You've successfully run and modified your React Native App. :partying_face:
+## 📄 License
 
-### Now what?
+This project is licensed under the MIT License - see the LICENSE file for details.
 
-- If you want to add this new React Native code to an existing application, check out the [Integration guide](https://reactnative.dev/docs/integration-with-existing-apps).
-- If you're curious to learn more about React Native, check out the [docs](https://reactnative.dev/docs/getting-started).
+## 🙏 Acknowledgments
 
-# Troubleshooting
+- [PokéAPI](https://pokeapi.co/) for comprehensive Pokémon data
+- [Firebase](https://firebase.google.com/) for backend services
+- React Native community for excellent libraries
+- Pokémon Company for the amazing franchise
 
-If you're having issues getting the above steps to work, see the [Troubleshooting](https://reactnative.dev/docs/troubleshooting) page.
+---
 
-# Learn More
-
-To learn more about React Native, take a look at the following resources:
-
-- [React Native Website](https://reactnative.dev) - learn more about React Native.
-- [Getting Started](https://reactnative.dev/docs/environment-setup) - an **overview** of React Native and how setup your environment.
-- [Learn the Basics](https://reactnative.dev/docs/getting-started) - a **guided tour** of the React Native **basics**.
-- [Blog](https://reactnative.dev/blog) - read the latest official React Native **Blog** posts.
-- [`@facebook/react-native`](https://github.com/facebook/react-native) - the Open Source; GitHub **repository** for React Native.
+**Happy Pokémon Hunting! 🎯⚡**
