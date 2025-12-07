@@ -90,7 +90,7 @@ export const PokedexScreen: React.FC<PokedexScreenProps> = ({ onPokemonSelect })
       }
     } catch (error) {
       // Fallback to loaded Pokemon
-      const filtered = pokemon.filter(p => 
+      const filtered = pageData.filter(p =>
         p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         p.types.some(t => t.type.name.toLowerCase().includes(searchQuery.toLowerCase()))
       );

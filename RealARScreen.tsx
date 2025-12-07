@@ -58,6 +58,7 @@ export const RealARScreen: React.FC = () => {
         onModelPlaced={onARModelPlaced}
         lightEstimation={true}
         planeOrientation="both"
+        disableTap={false}
       />
       
       <View style={styles.controls}>
