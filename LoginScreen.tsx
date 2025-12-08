@@ -76,7 +76,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
             <ActivityIndicator color="#fff" />
           ) : (
             <Text style={styles.buttonText}>
-              {isSignUp ? 'Sign Up' : 'Sign In'}
+              {isSignUp ? 'Sign Up' : 'Log in'}
             </Text>
           )}
         </TouchableOpacity>
@@ -86,7 +86,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
           onPress={() => setIsSignUp(!isSignUp)}
         >
           <Text style={styles.switchText}>
-            {isSignUp ? 'Already have an account? Sign In' : 'Need an account? Sign Up'}
+            {isSignUp ? 'Already have an account? Log In' : 'Need an account? Sign Up'}
           </Text>
         </TouchableOpacity>
       </View>

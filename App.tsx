@@ -5,6 +5,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   StatusBar,
+  ActivityIndicator,
 } from 'react-native';
 import { Provider } from 'react-redux';
 
@@ -26,12 +27,34 @@ function AppContent() {
   const [currentScreen, setCurrentScreen] = useState<Screen>('login');
   const [selectedPokemon, setSelectedPokemon] = useState<Pokemon | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [initializing, setInitializing] = useState(true); // New state to hold initialization status
+  const [user, setUser] = useState<any>(null); // State to hold the Firebase user object
 
   useEffect(() => {
-    // Skip Firebase auth for now
-    setIsAuthenticated(true);
-    setCurrentScreen('pokedex');
-  }, []);
+    const subscriber = authService.onAuthStateChanged((firebaseUser) => {
+      // Check if a user is logged in
+      setUser(firebaseUser);
+      setIsAuthenticated(!!firebaseUser);
+
+      // Stop initializing once the first check is done
+      if (initializing) {
+        setInitializing(false);
+       }
+    });
+
+    // Unsubscribe on unmount
+    return subscriber;
+  }, [initializing]);
+
+  // loading screen
+  if (initializing) {
+      return (
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+          <ActivityIndicator size="large" color="#2c5aa0" />
+          <Text>Loading App...</Text>
+        </View>
+      );
+    }
 
   const handleLogin = () => {
     setIsAuthenticated(true);

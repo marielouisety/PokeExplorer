@@ -1,27 +1,35 @@
 import auth from '@react-native-firebase/auth';
 import { User } from './types';
 
+const mapFirebaseUserToAppUser = (firebaseUser: FirebaseAuthTypes.User): User => {
+  return {
+    uid: firebaseUser.uid,
+    email: firebaseUser.email || '',
+    displayName: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'Explorer',
+  };
+};
+
 class AuthService {
-  async signInWithEmailAndPassword(email: string, password: string): Promise<User> {
+  async signInWithEmail(email: string, password: string): Promise<User> {
     const userCredential = await auth().signInWithEmailAndPassword(email, password);
     const firebaseUser = userCredential.user;
-    
-    return {
-      uid: firebaseUser.uid,
-      email: firebaseUser.email || '',
-      displayName: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || '',
-    };
+
+    if (!firebaseUser) {
+      throw new Error("Sign-in failed: User not found after successful authentication.");
+    }
+
+    return mapFirebaseUserToAppUser(firebaseUser);
   }
 
-  async createUserWithEmailAndPassword(email: string, password: string): Promise<User> {
-    const userCredential = await auth().createUserWithEmailAndPassword(email, password);
-    const firebaseUser = userCredential.user;
-    
-    return {
-      uid: firebaseUser.uid,
-      email: firebaseUser.email || '',
-      displayName: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || '',
-    };
+  async signUpWithEmail(email: string, password: string): Promise<User> {
+      const userCredential = await auth().createUserWithEmailAndPassword(email, password);
+      const firebaseUser = userCredential.user;
+
+      if (!firebaseUser) {
+          throw new Error("Sign-up failed: User not found after successful creation.");
+      }
+
+      return mapFirebaseUserToAppUser(firebaseUser);
   }
 
   async signOut(): Promise<void> {
@@ -32,21 +40,13 @@ class AuthService {
     const firebaseUser = auth().currentUser;
     if (!firebaseUser) return null;
     
-    return {
-      uid: firebaseUser.uid,
-      email: firebaseUser.email || '',
-      displayName: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || '',
-    };
+    return mapFirebaseUserToAppUser(firebaseUser);
   }
 
   onAuthStateChanged(callback: (user: User | null) => void): () => void {
     return auth().onAuthStateChanged((firebaseUser) => {
       if (firebaseUser) {
-        const user: User = {
-          uid: firebaseUser.uid,
-          email: firebaseUser.email || '',
-          displayName: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || '',
-        };
+        const user = mapFirebaseUserToAppUser(firebaseUser);
         callback(user);
       } else {
         callback(null);
