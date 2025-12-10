@@ -1,4 +1,4 @@
-package com.pokeexplorer
+package labubumatchalatte.pokeexplorer
 
 import com.facebook.react.ReactActivity
 import com.facebook.react.ReactActivityDelegate

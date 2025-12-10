@@ -1,4 +1,4 @@
-package com.pokeexplorer
+package labubumatchalatte.pokeexplorer
 
 import android.app.Application
 import com.facebook.react.PackageList

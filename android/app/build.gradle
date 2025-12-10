@@ -78,9 +78,9 @@ android {
     buildToolsVersion rootProject.ext.buildToolsVersion
     compileSdk rootProject.ext.compileSdkVersion
 
-    namespace "com.pokeexplorer"
+    namespace "labubumatchalatte.pokeexplorer"
     defaultConfig {
-        applicationId "com.pokeexplorer"
+        applicationId "labubumatchalatte.pokeexplorer"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1

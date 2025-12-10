@@ -22,10 +22,15 @@ import { AR3DScreen } from './AR3DScreen';
 import { ProfileScreen } from './ProfileScreen';
 import { VRLiteHabitatScreen } from './VRLiteHabitatScreen';
 import { Pokemon } from './types';
+import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import { authService } from './auth';
 
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
+
+GoogleSignin.configure({
+  webClientId: "1060774015394-diitt134tfleu3krfo7tjrir6tdiugul.apps.googleusercontent.com",
+});
 
 const PokedexStack = () => {
     return (

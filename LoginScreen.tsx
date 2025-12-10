@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,10 +7,14 @@ import {
   StyleSheet,
   Alert,
   ActivityIndicator,
+  Image,
 } from 'react-native';
 import { useDispatch } from 'react-redux';
 import { setUser } from './store';
 import { authService } from './auth';
+
+import auth from '@react-native-firebase/auth';
+import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
 
 interface LoginScreenProps {
   onLogin: () => void;
@@ -23,6 +27,12 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
   const [loading, setLoading] = useState(false);
   const dispatch = useDispatch();
 
+  useEffect(() => {
+    GoogleSignin.configure({
+      webClientId: '1060774015394-diitt134tfleu3krfo7tjrir6tdiugul.apps.googleusercontent.com',
+    });
+  }, []);
+
   const handleAuth = async () => {
     if (!email || !password) {
       Alert.alert('Error', 'Please fill in all fields');
@@ -31,10 +41,10 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
 
     setLoading(true);
     try {
-      const user = isSignUp 
+      const user = isSignUp
         ? await authService.signUpWithEmail(email, password)
         : await authService.signInWithEmail(email, password);
-      
+
       dispatch(setUser(user));
       onLogin();
     } catch (error: any) {
@@ -44,12 +54,47 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
     }
   };
 
+  const handleGoogleSignIn = async () => {
+    setLoading(true);
+    try {
+      await GoogleSignin.hasPlayServices();
+      const { idToken } = await GoogleSignin.signIn();
+
+      const googleCredential = auth.GoogleAuthProvider.credential(idToken);
+
+      const userCredential = await auth().signInWithCredential(googleCredential);
+
+      const user = userCredential.user;
+
+      dispatch(setUser({
+        uid: user.uid,
+        email: user.email,
+        displayName: user.displayName,
+      }));
+
+      onLogin();
+    } catch (error: any) {
+      if (error.code === statusCodes.SIGN_IN_CANCELLED) {
+        console.log('User cancelled the login flow');
+      } else if (error.code === statusCodes.IN_PROGRESS) {
+        console.log('Operation (e.g. sign in) is in progress already');
+      } else if (error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
+        Alert.alert('Error', 'Google Play Services not available or outdated.');
+      } else {
+        Alert.alert('Google Sign-In Error', error.message);
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <View style={styles.container}>
       <Text style={styles.title}>PokeExplorer</Text>
       <Text style={styles.subtitle}>Discover Pokemon in AR</Text>
-      
+
       <View style={styles.form}>
+        {/* Existing Email/Password Form */}
         <TextInput
           style={styles.input}
           placeholder="Email"
@@ -58,7 +103,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
           keyboardType="email-address"
           autoCapitalize="none"
         />
-        
+
         <TextInput
           style={styles.input}
           placeholder="Password"
@@ -66,9 +111,9 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
           onChangeText={setPassword}
           secureTextEntry
         />
-        
-        <TouchableOpacity 
-          style={styles.button} 
+
+        <TouchableOpacity
+          style={styles.button}
           onPress={handleAuth}
           disabled={loading}
         >
@@ -80,8 +125,34 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
             </Text>
           )}
         </TouchableOpacity>
-        
-        <TouchableOpacity 
+
+        <View style={styles.separatorContainer}>
+            <View style={styles.separatorLine} />
+            <Text style={styles.separatorText}>OR</Text>
+            <View style={styles.separatorLine} />
+        </View>
+
+        <TouchableOpacity
+          style={[styles.button, styles.googleButton]}
+          onPress={handleGoogleSignIn}
+          disabled={loading}
+        >
+          {loading ? (
+            <ActivityIndicator color="#000" />
+          ) : (
+            <View style={styles.googleButtonContent}>
+              <Image
+                source={require('./android/app/src/assets/google-icon.png')}
+                style={styles.googleIcon}
+              />
+              <Text style={styles.googleButtonText}>
+                Sign in with Google
+              </Text>
+            </View>
+          )}
+        </TouchableOpacity>
+
+        <TouchableOpacity
           style={styles.switchButton}
           onPress={() => setIsSignUp(!isSignUp)}
         >
@@ -149,6 +220,43 @@ const styles = StyleSheet.create({
   },
   switchText: {
     color: '#2c5aa0',
+    fontSize: 14,
+  },
+  googleButton: {
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#ddd',
+    marginBottom: 25,
+    padding: 10,
+  },
+  googleButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  googleButtonText: {
+    color: '#000',
+    fontSize: 16,
+    marginLeft: 10,
+  },
+  googleIcon: {
+    width: 24,
+    height: 24,
+  },
+  separatorContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginVertical: 10,
+  },
+  separatorLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: '#ddd',
+  },
+  separatorText: {
+    color: '#999',
+    marginHorizontal: 10,
     fontSize: 14,
   },
 });
